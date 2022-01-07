@@ -1,11 +1,11 @@
-from prognos_antal_nyinskrivna import ErrorMetrics, create_ForecastTest, run_ForecastTest
+from test_forecast import ErrorMetrics, create_ForecastTest, run_ForecastTest
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
-def create_walkforward_forecast_test(start_date, df, no_of_days_in_forecast, n):
+def create_walkforward_forecast_test(start_date, df, no_of_days_in_forecast, n, label_for_predicted_variable):
     start_date_list = [start_date + pd.Timedelta(days=i*no_of_days_in_forecast) for i in range(n)]
 
-    tests_list = [create_ForecastTest(df, start_date_list[i], no_of_days_in_forecast) for i in range(n)]
+    tests_list = [create_ForecastTest(df, start_date_list[i], no_of_days_in_forecast, label_for_predicted_variable) for i in range(n)]
     return tests_list
 
 # define function that run_ForecastTest on a list of ForecastTest-objects

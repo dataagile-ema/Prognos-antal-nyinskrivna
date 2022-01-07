@@ -8,18 +8,19 @@ from dataclasses import dataclass
 @dataclass
 class ForecastTest:
     """"
-    Parametrar för att göra ett test av prognos av antal nyinskrivna på IVA.
+    Parametrar för att göra ett test av prognos av en tidsserie.
     start_of_prediction: datum då prognosen ska börja
     end_of_prediction: datum då prognosen ska slutar
     period: antal dagar som ska prognoseras
     df_train: dataframe med data som modellen passas med
-    df: hela datasetet som läses in från csb-filen, som testet använder som träningsdata och utfall.
+    df: hela datasetet som läses in från csv-filen, som testet använder som träningsdata och utfall.
     """
     start_of_forecast: pd.Timestamp 
     end_of_forecast: pd.Timestamp
     period: pd.Timedelta
     df_train: pd.DataFrame
     df: pd.DataFrame
+    label_for_predicted_variable: str
 
 # dateclass error metrics
 @dataclass 
@@ -36,7 +37,7 @@ class ErrorMetrics:
 @dataclass 
 class ForecastResults:
     """
-    Parametrar för att visa resultat av prognos av antal nyinskrivna på IVA.
+    Parametrar för att visa resultat av prognos.
     df_forecast: dataframe med prognosen
     df_naive_forecast: dataframe med utfall från naive modellen (medelvärdet av antal nyinskrivna för sista perioden in träningsdata)
     model: modell-objektet
@@ -64,14 +65,16 @@ def read_and_prep_data(path: str):
 
 from datetime import timedelta, date
 
-def create_ForecastTest(df: pd.DataFrame, forecast_period_start_date: pd.Timestamp, no_of_days_in_forecast: int) -> ForecastTest:
+def create_ForecastTest(df: pd.DataFrame, forecast_period_start_date: pd.Timestamp, 
+        no_of_days_in_forecast: int, label_for_predicted_variable: str) -> ForecastTest:
     """
-    Skapar ett objekt med paramterar för ett testa prognos av antal nyinskrivna på IVA
+    Skapar ett objekt med paramterar för ett testa prognos
     df: hela datasetet som läses in från csb-filen, som testet använder som träningsdata och utfall.
     pred_period_start_date: datum då prognosen ska börja
     prediction_period: antal dagar som ska prognoseras (exemple: 15)
     """
-    test = ForecastTest(None, None, None, None, None)
+    test = ForecastTest(None, None, None, None, None, None)
+    test.label_for_predicted_variable = label_for_predicted_variable
     test.df = df
     test.start_of_forecast = forecast_period_start_date
     test.period = pd.to_timedelta(no_of_days_in_forecast, unit='d')
@@ -205,11 +208,11 @@ def plot_result_ForecastTest(test: ForecastTest, fr: ForecastResults) -> None:
     fig, ax = plt.subplots(figsize=(12, 8))
 
     # add title to plot
-    fig.suptitle('Antal nyinskrivna', fontsize=16)
+    fig.suptitle(test.label_for_predicted_variable, fontsize=16)
     # add label to x-axis
     ax.set_xlabel('Datum', fontsize=14)
     # add label to y-axis
-    ax.set_ylabel('Antal nyinskrivna', fontsize=14)
+    ax.set_ylabel(test.label_for_predicted_variable, fontsize=14)
     fr.df_forecast.plot(x='ds', y='yhat', ax=ax, label='prognos')
 
     test.df[(test.df['ds'] >= test.start_of_forecast - test.period) & 

@@ -1,5 +1,5 @@
 import pandas as pd
-import fbprophet as fb
+import prophet
 import matplotlib.pyplot as plt
 from IPython.display import clear_output
 from dataclasses import dataclass
@@ -16,9 +16,9 @@ class ForecastTest:
     df_train: dataframe med data som modellen passas med
     df: hela datasetet som läses in från csv-filen, som testet använder som träningsdata och utfall.
     """
-    start_of_forecast: pd.Timestamp 
-    end_of_forecast: pd.Timestamp
-    period: pd.Timedelta
+    start_date_forecast: pd.Timestamp 
+    end_date_forecast: pd.Timestamp
+    periods: int
     df_train: pd.DataFrame
     df: pd.DataFrame
     label_for_predicted_variable: str
@@ -51,7 +51,7 @@ class ForecastResults:
     EB: float bias för felet mellan prognos och utfall
     """
     df_forecast: pd.DataFrame
-    model: fb.Prophet
+    model: prophet.Prophet
     df_residuals: pd.DataFrame
     errorMetrics: ErrorMetrics
 
@@ -66,16 +66,18 @@ def create_ForecastTest(df: pd.DataFrame, forecast_period_start_date: pd.Timesta
     prediction_period: antal dagar som ska prognoseras (exemple: 15)
     """
     test = ForecastTest(None, None, None, None, None, None, None, None)
+    test.periods = no_of_days_in_forecast
     test.label_for_predicted_variable = label_for_predicted_variable
     test.start_date_plot = plot_start_date
     test.end_date_plot = plot_end_date
     test.df = df
-    test.start_of_forecast = forecast_period_start_date
-    test.period = pd.to_timedelta(no_of_days_in_forecast, unit='d')
-    test.end_of_forecast = test.start_of_forecast + test.period
-    test.df_train = df[df['ds'] < test.start_of_forecast]
+    test.start_date_forecast = forecast_period_start_date
+    no_of_days_after_start_date = pd.to_timedelta(test.periods - 1, unit='d')
+    test.end_date_forecast = test.start_date_forecast + no_of_days_after_start_date
+
+    test.df_train = df[df['ds'] < test.start_date_forecast]
     # check that start_of_prediction_period + prediction_period is not after last date in ds for df
-    assert test.end_of_forecast <= get_last_date(df)
+    assert test.end_date_forecast <= get_last_date(df)
     return test
 
 
@@ -84,8 +86,8 @@ def calc_residuals(test, df_forecast):
     returnerar en dataframe med residualer från prognosen
     """
     df_residuals = pd.DataFrame()
-    df_residuals = test.df[(test.df['ds'] >= test.start_of_forecast) &
-                            (test.df['ds'] <= test.end_of_forecast)]  # get data for prediction period
+    df_residuals = test.df[(test.df['ds'] >= test.start_date_forecast) &
+                            (test.df['ds'] <= test.end_date_forecast)]  # get data for prediction period
 
     df_residuals.loc[:,'residuals'] = df_residuals['y'] - df_forecast['yhat']   # calc residuals
     df_residuals.loc[:,'residuals_abs'] = abs(df_residuals['residuals'])  # calc absolute residuals
@@ -99,6 +101,7 @@ def calc_error_metrics(df_residuals):
     rmse = np.sqrt(np.mean(df_residuals['residuals']**2))
     # calc error bias
     eb = df_residuals['residuals'].mean()
+
     return mae,rmse,eb
 
 def make_model_forecast(test: ForecastTest):
@@ -106,15 +109,17 @@ def make_model_forecast(test: ForecastTest):
     passar df_train till en modell, returnerar ett objekt med prognos, modeell, residualer och beräknat fel
     """
     # Create model
-    model = fb.Prophet(changepoint_prior_scale=0.05)
+    model = prophet.Prophet(changepoint_prior_scale=0.05)
     # Fit model
     model.fit(test.df_train)
     # Make a future dataframe
-    future = model.make_future_dataframe(periods=test.period.days)
+    future = model.make_future_dataframe(periods=test.periods)
     # Make predictions
     df_forecast = model.predict(future)
+
     # cut df_forecast to only contain data from start_of_prediction_period
-    df_forecast = df_forecast[df_forecast['ds'] >= test.start_of_forecast]
+    df_forecast = df_forecast[df_forecast['ds'] >= test.start_date_forecast]
+
     # Calculate residuals and error metrics for model forecast
     df_residuals = calc_residuals(test, df_forecast)
     mae,rmse,eb = calc_error_metrics(df_residuals)
@@ -131,17 +136,14 @@ def make_naive_forecast(test: ForecastTest):
     df_naive_forecast = pd.DataFrame()
     df_naive_forecast['ds'] = test.df['ds']
 
-    # no of days in test.period
-    no_of_days_in_period = test.period.days
-
     # set mean_val to the mean of 'y' of the last no_of_days_in_period in df_train
-    mean_val = test.df_train['y'].tail(n=no_of_days_in_period).mean()
+    mean_val = test.df_train['y'].tail(n=test.periods).mean()
 
     df_naive_forecast['yhat'] = mean_val
     # cut df_forecast to only contain data from start_of_prediction_period
-    df_naive_forecast = df_naive_forecast[df_naive_forecast['ds'] >= test.start_of_forecast]
+    df_naive_forecast = df_naive_forecast[df_naive_forecast['ds'] >= test.start_date_forecast]
     # cut df_forecast to only contain data to end_of_prediction_period
-    df_naive_forecast = df_naive_forecast[df_naive_forecast['ds'] <= test.end_of_forecast]
+    df_naive_forecast = df_naive_forecast[df_naive_forecast['ds'] <= test.end_date_forecast]
 
     naive_model = None
 
@@ -167,9 +169,7 @@ def run_ForecastTest(test: ForecastTest, naive: bool):
         forecast_results = make_naive_forecast(test)
 
     plot_result_ForecastTest(test, forecast_results)
-    print_dataframe_periods(forecast_results.df_forecast, 'df_naive_forecast')
-    print_dataframe_periods(test.df_train, 'df_train')
-    print_dataframe_periods(test.df, 'df')
+ 
     
     return forecast_results.errorMetrics
 
@@ -184,11 +184,15 @@ def plot_result_ForecastTest(test: ForecastTest, fr: ForecastResults) -> None:
     fig.suptitle(test.label_for_predicted_variable, fontsize=16)
     ax.set_xlabel('Datum', fontsize=14)
     ax.set_ylabel(test.label_for_predicted_variable, fontsize=14)
+
+    # plot forecast
     fr.df_forecast.plot(x='ds', y='yhat', ax=ax, label='prognos')
 
-    test.df[(test.df['ds'] >= test.start_of_forecast - test.period) & 
-        (test.df['ds'] < test.start_of_forecast + test.period)].plot(x='ds', y='y', ax=ax, label='utfall')
+    # plot actial values
+    test.df[(test.df['ds'] >= test.start_date_forecast) & 
+        (test.df['ds'] <= test.end_date_forecast)].plot(x='ds', y='y', ax=ax, label='utfall')
 
+    # plot train
     test.df_train[test.df_train['ds'] >= test.start_date_plot].plot(x='ds', y='y', ax=ax, label='träningsdata')
 
     ax.set_xlim(test.start_date_plot, test.end_date_plot)

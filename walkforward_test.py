@@ -59,8 +59,8 @@ def plot_results_walkforward(results_model, results_naive):
     min_value_y_scale = min(mean_MEA_model, mean_MEA_naive, mean_RMSE_model, mean_RMSE_naive, mean_EB_model, mean_EB_naive) - 1
 
     # Medel absolut fel (MAE)
-    print('Mean MAE for model: {:.1f}'.format(mean_MEA_model))
-    print('Mean MAE for naive: {:.1f}'.format(mean_MEA_naive))
+    print('Mean MAE for model: {:.3f}'.format(mean_MEA_model))
+    print('Mean MAE for naive: {:.3f}'.format(mean_MEA_naive))
 
     plt.bar(['Model', 'Naiv'], [mean_MEA_model, mean_MEA_naive])
     plt.ylim(min_value_y_scale, max_value_y_scale)
@@ -68,8 +68,8 @@ def plot_results_walkforward(results_model, results_naive):
     plt.show()   
    
     # Medel RMSE
-    print('Medel RMSE modell: {:.1f}'.format(mean_RMSE_model))
-    print('Medel RMSE naive: {:.1f}'.format(mean_RMSE_naive))
+    print('Medel RMSE modell: {:.3f}'.format(mean_RMSE_model))
+    print('Medel RMSE naive: {:.3f}'.format(mean_RMSE_naive))
 
     plt.bar(['Model', 'Naiv'], [mean_RMSE_model, mean_RMSE_naive])
     plt.ylim(min_value_y_scale, max_value_y_scale)
@@ -77,8 +77,8 @@ def plot_results_walkforward(results_model, results_naive):
     plt.show()
 
     # Medelvärde för alla residualer (EB)
-    print('Medelvärde alla residualer modell: {:.1f}'.format(mean_EB_model))
-    print('Medelvärde alla residualer  naive: {:.1f}'.format(mean_EB_naive))
+    print('Medelvärde alla residualer modell: {:.3f}'.format(mean_EB_model))
+    print('Medelvärde alla residualer  naive: {:.3f}'.format(mean_EB_naive))
 
     plt.bar(['Model', 'Naiv'], [mean_EB_model, mean_EB_naive])
     plt.ylim(min_value_y_scale, max_value_y_scale)    

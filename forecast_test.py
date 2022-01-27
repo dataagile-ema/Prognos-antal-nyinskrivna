@@ -211,9 +211,10 @@ def plot_result_ForecastTest(test: ForecastTest, fr: ForecastResults) -> None:
 
     # plot model components
     if fr.model is not None:
-        fr.model.plot_components(fr.df_forecast)
+        plot = fr.model.plot_components(fr.df_forecast)
+        plot.savefig(f'Figures model/{test.label_for_predicted_variable}_components.png')
         plt.show()
-
+        
 
 def get_last_date(df: pd.DataFrame) -> pd.Timestamp:
     return df.iloc[-1]['ds']

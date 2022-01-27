@@ -19,7 +19,7 @@ def save_gif():
     for filename in glob.glob('figures naive/*.png'):
         images.append(imageio.imread(filename))
     # add a delay between each image
-    imageio.mimsave('Animations/animation navie.gif', images, duration=0.5)
+    imageio.mimsave('Animations/animation naive.gif', images, duration=0.5)
 
 
 
